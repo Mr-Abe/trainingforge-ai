@@ -1,12 +1,10 @@
 export type TrainingFormData = {
   topic: string;
   audience: string;
-  trainingGoal: string;
   durationMinutes: number;
   deliveryFormat: "workshop" | "self-paced" | "presentation" | "hands-on-lab";
   experienceLevel: "beginner" | "intermediate" | "advanced" | "mixed";
   tone: "practical" | "friendly" | "technical" | "executive";
-  constraints?: string;
 };
 
 export type LearningObjective = {
@@ -29,11 +27,25 @@ export type KnowledgeCheckQuestion = {
   explanation?: string;
 };
 
+export type MainLesson = {
+  title: string;
+  sections: string[];
+};
+
+export type ScenarioActivity = {
+  title: string;
+  setup: string;
+  instructions: string[];
+  debriefQuestions: string[];
+};
+
 export type TrainingResult = {
   title: string;
   summary: string;
   learningObjectives: LearningObjective[];
   agenda: AgendaItem[];
+  mainLesson: MainLesson;
+  scenarioActivity: ScenarioActivity;
   facilitatorNotes: string[];
   knowledgeCheck: KnowledgeCheckQuestion[];
   markdownDraft: string;
