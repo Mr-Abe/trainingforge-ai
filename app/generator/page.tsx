@@ -8,6 +8,7 @@ import {
   type TrainingFormValues,
 } from "@/components/TrainingForm";
 import { TrainingResults } from "@/components/TrainingResults";
+import { generateTraining } from "@/lib/api";
 import type { TrainingFormData, TrainingResult } from "@/lib/types";
 import { useState } from "react";
 
@@ -18,20 +19,6 @@ const initialValues: TrainingFormValues = {
   experienceLevel: "",
   tone: "",
   topic: "",
-};
-
-const formatLabels: Record<TrainingFormData["deliveryFormat"], string> = {
-  "hands-on-lab": "hands-on lab",
-  presentation: "presentation",
-  "self-paced": "self-paced module",
-  workshop: "workshop",
-};
-
-const toneLabels: Record<TrainingFormData["tone"], string> = {
-  executive: "executive",
-  friendly: "friendly",
-  practical: "practical",
-  technical: "technical",
 };
 
 function validateForm(values: TrainingFormValues): TrainingFormErrors {
@@ -75,130 +62,6 @@ function toTrainingFormData(values: TrainingFormValues): TrainingFormData {
   };
 }
 
-function createMockTrainingResult(formData: TrainingFormData): TrainingResult {
-  const duration = formData.durationMinutes;
-  const firstSegment = Math.max(10, Math.round(duration * 0.2));
-  const secondSegment = Math.max(15, Math.round(duration * 0.35));
-  const thirdSegment = Math.max(15, Math.round(duration * 0.3));
-  const finalSegment = Math.max(5, duration - firstSegment - secondSegment - thirdSegment);
-
-  return {
-    agenda: [
-      {
-        description:
-          "Frame the purpose, define success for the session, and connect the topic to the audience's day-to-day work.",
-        durationMinutes: firstSegment,
-        id: "agenda-1",
-        title: "Context and outcomes",
-      },
-      {
-        description:
-          "Introduce the core process, examples, and decision points learners need to understand.",
-        durationMinutes: secondSegment,
-        id: "agenda-2",
-        title: "Guided lesson",
-      },
-      {
-        description:
-          "Practice with a realistic scenario and compare approaches in small groups.",
-        durationMinutes: thirdSegment,
-        id: "agenda-3",
-        title: "Scenario activity",
-      },
-      {
-        description:
-          "Check understanding, answer questions, and identify next actions.",
-        durationMinutes: finalSegment,
-        id: "agenda-4",
-        title: "Knowledge check and wrap-up",
-      },
-    ],
-    facilitatorNotes: [
-      `Keep examples specific to ${formData.audience}.`,
-      `Use a ${toneLabels[formData.tone]} tone and avoid unnecessary jargon unless it helps the audience.`,
-      "Ask learners to explain tradeoffs in their own words before showing the recommended answer.",
-      "Capture unanswered questions for follow-up material in a later version.",
-    ],
-    knowledgeCheck: [
-      {
-        correctAnswer: "Apply the process to a realistic example and explain the decision.",
-        explanation:
-          "The goal is not recall alone. Learners should demonstrate how they would use the training in context.",
-        id: "question-1",
-        options: [
-          "Repeat the session title",
-          "Apply the process to a realistic example and explain the decision.",
-          "List every agenda item from memory",
-          "Skip practice and move directly to feedback",
-        ],
-        question: `What is the best evidence that ${formData.audience} understood ${formData.topic}?`,
-      },
-      {
-        correctAnswer: "Pause, clarify the scenario, and connect the next step to the objective.",
-        explanation:
-          "Facilitation should bring the group back to the desired behavior instead of rushing through content.",
-        id: "question-2",
-        options: [
-          "Move on quickly to preserve time",
-          "Pause, clarify the scenario, and connect the next step to the objective.",
-          "Give everyone the answer immediately",
-          "Remove the activity from the session",
-        ],
-        question: "What should the facilitator do if learners get stuck during the activity?",
-      },
-    ],
-    learningObjectives: [
-      {
-        description: `Explain the purpose of ${formData.topic} in language that fits ${formData.audience}.`,
-        id: "objective-1",
-      },
-      {
-        description:
-          "Identify the most important steps, risks, and success criteria for the topic.",
-        id: "objective-2",
-      },
-      {
-        description:
-          "Apply the core lesson to a realistic scenario and justify the chosen approach.",
-        id: "objective-3",
-      },
-    ],
-    mainLesson: {
-      sections: [
-        `Start by defining what ${formData.topic} means for ${formData.audience} and why it matters now.`,
-        "Break the concept into a small set of repeatable decisions learners can recognize and practice.",
-        "Use contrast examples to show the difference between a weak response and a strong response.",
-        "Close the lesson by connecting the concept back to the scenario activity and knowledge check.",
-      ],
-      title: "Main lesson",
-    },
-    markdownDraft: "",
-    scenarioActivity: {
-      debriefQuestions: [
-        "What information did your group need before making a decision?",
-        "Where did the scenario feel ambiguous or risky?",
-        "What would you do differently with a real stakeholder or customer involved?",
-      ],
-      instructions: [
-        "Split learners into pairs or small groups.",
-        "Give each group a short scenario connected to the training topic.",
-        "Ask each group to choose a response and explain the reasoning.",
-        "Compare responses as a full group and identify the strongest pattern.",
-      ],
-      setup: `Learners work through a realistic ${formatLabels[formData.deliveryFormat]} scenario where ${formData.audience} must apply ${formData.topic} under time pressure.`,
-      title: "Practice scenario",
-    },
-    summary: `A ${duration}-minute ${formatLabels[formData.deliveryFormat]} for ${formData.experienceLevel} learners, written in a ${toneLabels[formData.tone]} tone.`,
-    title: `${formData.topic} training for ${formData.audience}`,
-  };
-}
-
-function waitForMockResult() {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, 800);
-  });
-}
-
 export default function GeneratorPage() {
   const [errors, setErrors] = useState<TrainingFormErrors>({});
   const [formValues, setFormValues] =
@@ -238,10 +101,20 @@ export default function GeneratorPage() {
     setIsLoading(true);
     setResult(null);
 
-    await waitForMockResult();
-
-    setResult(createMockTrainingResult(toTrainingFormData(formValues)));
-    setIsLoading(false);
+    try {
+      const generatedResult = await generateTraining(
+        toTrainingFormData(formValues),
+      );
+      setResult(generatedResult);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Unable to generate training materials.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -255,9 +128,9 @@ export default function GeneratorPage() {
             Build a training plan brief
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-stone-600">
-            Fill in the form below to preview the frontend-only generation
-            flow. Results are mocked for now; no Azure Function, AI API,
-            clipboard, or Markdown download is connected yet.
+            Fill in the form below to generate structured training materials
+            through the backend API. Copy and Markdown download stay available
+            after a successful response.
           </p>
         </section>
 
@@ -275,14 +148,14 @@ export default function GeneratorPage() {
 
           <div className="space-y-4">
             {isLoading ? (
-              <LoadingState message="Creating a mock training plan..." />
+              <LoadingState message="Generating training materials..." />
             ) : null}
             {result ? (
               <TrainingResults result={result} />
             ) : (
               <section className="rounded-[2rem] border border-dashed border-stone-300 bg-white/70 p-6 text-sm leading-6 text-stone-600">
-                Complete the form and generate a plan to see mock training
-                results here.
+                Complete the form and generate a plan to see training results
+                here.
               </section>
             )}
           </div>
