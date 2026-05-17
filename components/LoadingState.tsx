@@ -1,7 +1,13 @@
-export function LoadingState() {
+type LoadingStateProps = {
+  message?: string;
+};
+
+export function LoadingState({
+  message = "Drafting your training plan...",
+}: LoadingStateProps) {
   return (
-    <div className="rounded-3xl border border-dashed border-emerald-300 bg-emerald-50 p-6 text-sm text-emerald-900">
-      Loading state placeholder for future generation requests.
+    <div className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-6 text-sm font-medium text-emerald-900">
+      {message}
     </div>
   );
 }
