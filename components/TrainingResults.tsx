@@ -1,23 +1,98 @@
+"use client";
+
+import { trainingResultToMarkdown } from "@/lib/markdown";
 import type { TrainingResult } from "@/lib/types";
+import { useState } from "react";
 
 type TrainingResultsProps = {
   result: TrainingResult;
 };
 
+function createMarkdownFilename(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `${slug || "training-plan"}.md`;
+}
+
 export function TrainingResults({ result }: TrainingResultsProps) {
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const markdown = trainingResultToMarkdown(result);
+
+  async function handleCopy() {
+    setActionMessage(null);
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard API is unavailable.");
+      }
+
+      await navigator.clipboard.writeText(markdown);
+      setActionMessage("Copied Markdown to clipboard.");
+    } catch {
+      setActionMessage(
+        "Copy failed. Your browser may require HTTPS or clipboard permission.",
+      );
+    }
+  }
+
+  function handleDownload() {
+    const blob = new Blob([markdown], {
+      type: "text/markdown;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = createMarkdownFilename(result.title);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setActionMessage("Markdown download created.");
+  }
+
   return (
     <section className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-      <div>
-        <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-800">
-          Mock result
-        </p>
-        <h2 className="mt-3 text-3xl font-black tracking-tight text-stone-950">
-          {result.title}
-        </h2>
-        <p className="mt-3 text-sm leading-6 text-stone-600">
-          {result.summary}
-        </p>
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-800">
+            Mock result
+          </p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-stone-950">
+            {result.title}
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-stone-600">
+            {result.summary}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
+          <button
+            className="rounded-full bg-stone-950 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-stone-900/10 transition hover:-translate-y-0.5 hover:bg-stone-800"
+            onClick={() => void handleCopy()}
+            type="button"
+          >
+            Copy to Clipboard
+          </button>
+          <button
+            className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-bold text-stone-950 transition hover:-translate-y-0.5 hover:border-stone-950"
+            onClick={handleDownload}
+            type="button"
+          >
+            Download Markdown
+          </button>
+        </div>
       </div>
+
+      {actionMessage ? (
+        <p className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
+          {actionMessage}
+        </p>
+      ) : null}
 
       <div className="mt-8 grid gap-6">
         <section className="rounded-3xl bg-stone-50 p-5">
